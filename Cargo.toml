@@ -20,6 +20,9 @@ mio = { version = "1", features = ["os-ext", "os-poll", "net"] }
 num-traits = "0.2"
 thiserror = "1"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 anyhow = "1.0.76"
 assert_matches = "1.5.0"

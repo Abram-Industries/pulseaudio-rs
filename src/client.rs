@@ -91,6 +91,11 @@ impl Client {
             "<unknown>".into()
         };
 
+        // A server that does not know the cookie still lets in a client of the
+        // same user whose AUTH carries its credentials.
+        #[cfg(target_os = "linux")]
+        pass_credentials(&socket)?;
+
         // Perform the handshake.
         let protocol_version;
         {
@@ -429,6 +434,30 @@ fn roundtrip_blocking<R: protocol::CommandReply>(
 
     Ok(reply)
 }
+
+/// Has the kernel attach this process's credentials to every message sent.
+#[cfg(target_os = "linux")]
+fn pass_credentials(socket: &std::os::unix::net::UnixStream) -> std::io::Result<()> {
+    use std::os::fd::AsRawFd;
+
+    let on: libc::c_int = 1;
+    // SAFETY: `on` outlives the call, and its size is passed with it.
+    let rc = unsafe {
+        libc::setsockopt(
+            socket.as_raw_fd(),
+            libc::SOL_SOCKET,
+            libc::SO_PASSCRED,
+            (&raw const on).cast(),
+            size_of::<libc::c_int>() as libc::socklen_t,
+        )
+    };
+    if rc == 0 {
+        Ok(())
+    } else {
+        Err(std::io::Error::last_os_error())
+    }
+}
+
 #[cfg(all(test, feature = "_integration-tests"))]
 mod tests {
     use std::time;
