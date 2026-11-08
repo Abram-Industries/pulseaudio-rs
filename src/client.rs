@@ -95,7 +95,10 @@ impl Client {
         let protocol_version;
         {
             let mut reader = BufReader::new(&mut socket);
-            let cookie = cookie.as_ref().map(AsRef::as_ref).unwrap_or(&[]).to_owned();
+            // pipewire-pulse rejects a cookie that is not 256 bytes long.
+            let cookie = cookie
+                .as_ref()
+                .map_or_else(|| vec![0; 256], |c| c.as_ref().to_owned());
             let auth = protocol::AuthParams {
                 version: protocol::MAX_VERSION,
                 supports_shm: false,
